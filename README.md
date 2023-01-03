@@ -86,3 +86,47 @@ The code given is structured as follows. Feel free however to modify the structu
 * [Sqlite3](https://sqlite.org/index.html) - Database storage engine
 
 Happy hacking 😁!
+
+## NOTES
+
+### INITIAL DECISIONS:
+
+- This project will be treated as a mix of a task and a real system
+- The reason for statement above is to be pragmatic and to avoid the loop of over-engineering the task
+- It will have **SOME** practices from real systems to show 
+
+### ASSUMPTIONS
+
+- The microservice is running on multiple servers
+- System doesn't have constant high throughput, because invoices are handled periodically (transactions would be the opposite) 
+- Pleo has established excellent SLA with payment provider regarding the rate-limit of requests (because of transactions microservice), so don't have to worry about it
+- Don't know the logic behind the amount of the bill
+
+
+### BUSINESS DECISIONS
+1. **TIMEZONES**
+- PROBLEM:
+  - There are multiple currencies in the project which indicates customers are in different countries/continents. 
+  - Is there a need to handle charging of customers depending on the timezone?
+  - Does the pricing depend on the number of transactions of customer? If yes the timezone will matter.
+- SOLUTION:
+    - After looking at the PLEO [documentation](https://www.pleo.io/en/pricing), the charging of the PLEO services is based on the number of customer and administrative transactions 
+    - PLEO Sales/Administrative team will prepare the bills before the every first of the month
+2. **PENDING INVOICES**
+- PROBLEM:
+  - What are representing the PENDING INVOICES?
+- SOLUTION:
+  - As mentioned in the timezone problem the Sales/Administrative team will prepare the bills before and enter them into the system using admin tool which will in the background insert those bills in the Invoice table and mark them as PENDING.
+  - The solution is to get those invoices from database on every 1. of the month and pass them to the payment provider
+
+#### ARCHITECTURE DECISIONS
+
+1. SCHEDULER 
+- PROBLEM:
+  - For scheduling payments there are two options:
+    1. Java util ScheduledExecutorService
+    2. [Quartz](http://www.quartz-scheduler.org/) a richly featured, open source job scheduling library
+- SOLUTION
+  - The ScheduledExecutorService will be used for this task to avoid overhead of importing the library and to keep it simple
+  - However, I think Quartz is a great solution since it provides a lot of [configuration](https://github.com/quartz-scheduler/quartz/blob/master/docs/configuration.adoc) for managing e.g the threads
+  - If the PLEO has a lot of scheduling in their microservices I think it would be great even to have a custom library such as quartz
