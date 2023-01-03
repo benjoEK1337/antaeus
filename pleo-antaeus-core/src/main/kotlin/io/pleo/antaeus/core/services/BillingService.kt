@@ -53,6 +53,8 @@ class BillingService(
         } catch (ex: Exception) {
 
             if (ex is ExternalServiceNotAvailableException) {
+                invoiceService.updateInvoiceStatus(invoice.id, InvoiceStatus.FAILED)
+
                 numberOfNetworkFailedChargings++
                 logger.warn("Payment provider is currently unavailable. In the current charging iteration there are $numberOfNetworkFailedChargings failed chargings due to unavailability.")
                 return
