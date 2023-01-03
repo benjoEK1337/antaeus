@@ -66,10 +66,20 @@ fun main() {
 
     val invoiceBillingScheduler = InvoiceBillingScheduler(billingService)
     invoiceBillingScheduler.schedule()
+    registerShutdownHook(invoiceBillingScheduler)
 
     // Create REST web service
     AntaeusRest(
         invoiceService = invoiceService,
         customerService = customerService
     ).run()
+}
+
+// Adding this function to properly shut down the scheduler in the case instance is terminated (deployment, crash...)
+private fun registerShutdownHook(invoiceBillingScheduler: InvoiceBillingScheduler) {
+    Runtime.getRuntime().addShutdownHook(object : Thread() {
+        override fun run() {
+            invoiceBillingScheduler.stop()
+        }
+    })
 }
