@@ -1,5 +1,6 @@
 package io.pleo.antaeus.core.schedulers
 
+import io.pleo.antaeus.core.schedulers.definition.Scheduler
 import io.pleo.antaeus.core.services.BillingService
 import mu.KotlinLogging
 import java.time.Duration
@@ -19,7 +20,7 @@ class InvoiceBillingScheduler(
     }
 
     private val chargeMonthlyInvoicesTask = Runnable {
-        billingService.chargeMonthlyInvoices()
+        billingService.chargeCustomersPendingInvoices()
         schedule()
     }
 

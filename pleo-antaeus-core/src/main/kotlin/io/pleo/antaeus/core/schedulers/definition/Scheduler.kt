@@ -1,4 +1,4 @@
-package io.pleo.antaeus.core.schedulers
+package io.pleo.antaeus.core.schedulers.definition
 
 
 interface Scheduler {

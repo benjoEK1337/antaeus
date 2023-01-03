@@ -6,7 +6,7 @@
     however the documentation lays out scenarios in which paying an invoice could fail.
  */
 
-package io.pleo.antaeus.core.external
+package io.pleo.antaeus.core.external.definition
 
 import io.pleo.antaeus.models.Invoice
 
