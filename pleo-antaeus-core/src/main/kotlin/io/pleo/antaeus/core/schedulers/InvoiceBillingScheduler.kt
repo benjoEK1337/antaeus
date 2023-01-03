@@ -27,9 +27,9 @@ class InvoiceBillingScheduler(
     override fun stop() {
         executor.shutdown()
         if (!executor.awaitTermination(SHUTDOWN_TIME, TimeUnit.SECONDS)) {
-            logger.error("Executor did not terminate in the specified time. There might be unprocessed bills.")
+            logger.warn("Executor did not terminate in the specified time. There might be unprocessed bills.")
             val droppedTasks: List<Runnable> = executor.shutdownNow()
-            logger.info("Executor was abruptly shut down. " + droppedTasks.size + " tasks will not be executed.")
+            logger.warn("Executor was abruptly shut down. " + droppedTasks.size + " tasks will not be executed.")
         }
     }
 
@@ -41,16 +41,32 @@ class InvoiceBillingScheduler(
     private fun calculateSchedulerDelay() {
         val currentDate = LocalDateTime.now()
 
-        if (currentDate.dayOfMonth == 1 && currentDate.hour < 6) {
-            delay = Duration.between(currentDate, currentDate.withHour(6)).toMillis()
-            return
+        /**
+         * This part of code will be executed every time the server starts (deployment, crash..) or the billing service finishes with charging
+         * It could happen that someone deployed or server crashed in the middle of charging invoices
+         * Even though executor will gracefully shut down, there could be still failed and pending invoices
+         * The billing service will be called every half hour on the 1. to check if there are FAILED or PENDING invoices after first iteration
+         * If the payment provider is unavailable, by giving the half hour of delay, there is a space for provider to recover
+         * If on the second day -> there are PENDING or FAILED invoices - the admin team will be contacted
+         **/
+        when (currentDate.dayOfMonth) {
+            1 -> {
+                val halfHourInMilliseconds = (30 * 60 * 1000).toLong()
+                delay = halfHourInMilliseconds
+                return
+            }
+            2 -> {
+                checkIfFailedOrPendingInvoicesExist()
+            }
         }
 
         val dateToScheduleNextBilling = LocalDateTime.now()
             .withMonth(currentDate.month.value + 1)
             .withDayOfMonth(1)
-            .withHour(6)
+            .withHour(1)
 
-        delay = Duration.between(currentDate.withHour(6), dateToScheduleNextBilling).toMillis()
+        delay = Duration.between(currentDate.withHour(1), dateToScheduleNextBilling).toMillis()
     }
+
+    private fun checkIfFailedOrPendingInvoicesExist() {}
 }
