@@ -30,12 +30,32 @@ class BillingService(
     
     private fun chargeSingleCustomerInvoice(invoice: Invoice) {
         try {
-            paymentProvider.charge(invoice)
+            val isCustomerCharged = paymentProvider.charge(invoice)
+            handleCustomerChargeResponse(invoice, isCustomerCharged)
         } catch (ex: Exception) {
             handleChargingExceptions(ex, invoice)
         }
     }
-    
+
+    private fun handleCustomerChargeResponse(invoice: Invoice, isCustomerCharged: Boolean) {
+        if (isCustomerCharged) {
+            handleSuccessfulCharge(invoice)
+            return
+        }
+        handleFailedCharge(invoice)
+    }
+
+    private fun handleSuccessfulCharge(invoice: Invoice) {
+        invoiceService.updateInvoiceStatus(invoice.id, InvoiceStatus.PAID)
+        logger.info("Customer with $invoice.id ID is successfully charged for monthly expenses")
+        return
+    }
+
+    private fun handleFailedCharge(invoice: Invoice) {
+        customerService.notifyCustomerToCheckTheirAccountBalance(invoice.customerId)
+        logger.error("Monthly charge for customer with ${invoice.customerId} ID wasn't processed due to account balance issues")
+    }
+
     private fun handleChargingExceptions(ex: Exception, invoice: Invoice) {
         when (ex) {
             is CustomerNotFoundException -> {}
@@ -45,11 +65,13 @@ class BillingService(
         }
     }
 
+
     private fun handleNetworkException(invoice: Invoice) {
         try {
-            retry {
+            val isCustomerCharged = retry {
                 paymentProvider.charge(invoice)
             }
+            handleCustomerChargeResponse(invoice, isCustomerCharged)
         } catch (ex: Exception) {
 
             if (ex is ExternalServiceNotAvailableException) {

@@ -25,4 +25,8 @@ class CustomerService(
     fun notifyCustomerInvoiceIsCharged(customerId: Int) {
         emailService.notifyCustomerInvoiceIsCharged(customerId)
     }
+
+    fun notifyCustomerToCheckTheirAccountBalance(customerId: Int) {
+        emailService.notifyCustomerToCheckTheirAccountBalance(customerId)
+    }
 }
