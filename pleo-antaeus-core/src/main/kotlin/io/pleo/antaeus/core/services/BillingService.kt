@@ -17,7 +17,7 @@ class BillingService(
 ) {
 
     private val logger = KotlinLogging.logger {}
-    private var numberOfNetworkFailedChargings = 0;
+    private var numberOfNetworkFailedChargings = 0
 
     // Since this is charging we don't need extra speed by making this non-blocking, async and simple
     fun chargeCustomersPendingInvoices() {
@@ -52,7 +52,12 @@ class BillingService(
     }
 
     private fun handleFailedCharge(invoice: Invoice) {
-        customerService.notifyCustomerToCheckTheirAccountBalance(invoice.customerId)
+
+        if (invoice.status == InvoiceStatus.PENDING) {
+            invoiceService.updateInvoiceStatus(invoice.id, InvoiceStatus.FAILED)
+            customerService.notifyCustomerToCheckTheirAccountBalance(invoice.customerId)
+        }
+
         logger.error("Monthly charge for customer with ${invoice.customerId} ID wasn't processed due to account balance issues")
     }
 
@@ -65,7 +70,6 @@ class BillingService(
         }
     }
 
-
     private fun handleNetworkException(invoice: Invoice) {
         try {
             val isCustomerCharged = retry {
@@ -75,8 +79,6 @@ class BillingService(
         } catch (ex: Exception) {
 
             if (ex is ExternalServiceNotAvailableException) {
-                invoiceService.updateInvoiceStatus(invoice.id, InvoiceStatus.FAILED)
-
                 numberOfNetworkFailedChargings++
                 logger.warn("Payment provider is currently unavailable. In the current charging iteration there are $numberOfNetworkFailedChargings failed chargings due to unavailability.")
                 return
