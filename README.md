@@ -118,10 +118,26 @@ Happy hacking 😁!
 - SOLUTION:
   - As mentioned in the timezone problem the Sales/Administrative team will prepare the bills before and enter them into the system using admin tool which will in the background insert those bills in the Invoice table and mark them as PENDING.
   - The solution is to get those invoices from database on every 1. of the month and pass them to the payment provider
+3. **HOURS OF CHARGING**
+- PROBLEM:
+  - When to charge the customers?
+- SOLUTION:
+  - Charge at 6 AM (UTC) when the traffic is lower
+  - This helps also to avoid charging at 00:00 on the New Years Eve
 
 #### ARCHITECTURE DECISIONS
 
 1. SCHEDULER 
+- PROBLEM:
+  - For scheduling payments there are two options:
+    1. Java util ScheduledExecutorService
+    2. [Quartz](http://www.quartz-scheduler.org/) a richly featured, open source job scheduling library
+- SOLUTION
+    - The ScheduledExecutorService will be used for this task to avoid overhead of importing the library and to keep it simple
+    - However, I think Quartz is a great solution since it provides a lot of [configuration](https://github.com/quartz-scheduler/quartz/blob/master/docs/configuration.adoc) for managing e.g the threads
+    - If PLEO has a lot of scheduling in their microservices I think it would be great even to have a custom library such as quartz
+  
+2. SCHEDULER
 - PROBLEM:
   - For scheduling payments there are two options:
     1. Java util ScheduledExecutorService
