@@ -1,9 +1,6 @@
 package io.pleo.antaeus.core.services
 
-import io.pleo.antaeus.core.exceptions.CurrencyMismatchException
-import io.pleo.antaeus.core.exceptions.CustomerNotFoundException
-import io.pleo.antaeus.core.exceptions.NetworkException
-import io.pleo.antaeus.core.exceptions.ExternalServiceNotAvailableException
+import io.pleo.antaeus.core.exceptions.*
 import io.pleo.antaeus.core.external.definition.PaymentProvider
 import io.pleo.antaeus.core.utils.retry
 import io.pleo.antaeus.models.Invoice
@@ -13,27 +10,36 @@ import mu.KotlinLogging
 class BillingService(
     private val paymentProvider: PaymentProvider,
     private val invoiceService: InvoiceService,
-    private val customerService: CustomerService
+    private val customerService: CustomerService,
+    private val lockingService: LockingService
 ) {
 
     private val logger = KotlinLogging.logger {}
     private var numberOfNetworkFailedChargings = 0
 
-    // Since this is charging we don't need extra speed by making this non-blocking, async and simple
     fun chargeCustomersPendingInvoices() {
         val pendingInvoices = invoiceService.fetchInvoicesByStatus(setOf(InvoiceStatus.PENDING, InvoiceStatus.FAILED))
+
         pendingInvoices.forEach {
-            chargeSingleCustomerInvoice(it)
-            customerService.notifyCustomerInvoiceIsCharged(it.customerId)
-        }
+                chargeSingleCustomerInvoice(it)
+            }
     }
     
     private fun chargeSingleCustomerInvoice(invoice: Invoice) {
         try {
-            val isCustomerCharged = paymentProvider.charge(invoice)
-            handleCustomerChargeResponse(invoice, isCustomerCharged)
+            // By putting lock on the customerId we assure that only one charging will be executed in the cluster
+            if (lockingService.getLock(invoice.customerId) == null) {
+
+                lockingService.setLock(invoice.customerId)
+
+                val isCustomerCharged = paymentProvider.charge(invoice)
+                handleCustomerChargeResponse(invoice, isCustomerCharged)
+
+                lockingService.releaseLock(invoice.customerId)
+            }
         } catch (ex: Exception) {
             handleChargingExceptions(ex, invoice)
+            lockingService.releaseLock(invoice.customerId)
         }
     }
 
@@ -47,8 +53,8 @@ class BillingService(
 
     private fun handleSuccessfulCharge(invoice: Invoice) {
         invoiceService.updateInvoiceStatus(invoice.id, InvoiceStatus.PAID)
-        logger.info("Customer with $invoice.id ID is successfully charged for monthly expenses")
-        return
+        customerService.notifyCustomerInvoiceIsCharged(invoice.customerId)
+        logger.info("Customer with ${invoice.id} ID is successfully charged for monthly expenses")
     }
 
     private fun handleFailedCharge(invoice: Invoice) {
@@ -66,6 +72,7 @@ class BillingService(
             is CustomerNotFoundException -> customerService.handleCustomerNotFoundException(invoice.customerId)
             is CurrencyMismatchException -> invoiceService.handleCurrencyMismatchException(invoice)
             is NetworkException -> handleNetworkException(invoice)
+            is LockException -> lockingService.handleLockException(invoice.customerId)
             else -> {}
         }
     }
@@ -84,6 +91,7 @@ class BillingService(
                 return
             }
 
+            // The NetworkException will never be thrown here which is assured in the retry function - by that we avoid infinite loop
             handleChargingExceptions(ex, invoice)
         }
     }

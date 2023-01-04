@@ -13,9 +13,11 @@ import io.pleo.antaeus.core.schedulers.InvoiceBillingScheduler
 import io.pleo.antaeus.core.services.BillingService
 import io.pleo.antaeus.core.services.CustomerService
 import io.pleo.antaeus.core.services.InvoiceService
+import io.pleo.antaeus.core.services.LockingService
 import io.pleo.antaeus.data.AntaeusDal
 import io.pleo.antaeus.data.CustomerTable
 import io.pleo.antaeus.data.InvoiceTable
+import io.pleo.antaeus.data.LockTable
 import io.pleo.antaeus.rest.AntaeusRest
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
@@ -29,7 +31,7 @@ import java.sql.Connection
 
 fun main() {
     // The tables to create in the database.
-    val tables = arrayOf(InvoiceTable, CustomerTable)
+    val tables = arrayOf(InvoiceTable, CustomerTable, LockTable)
 
     val dbFile: File = File.createTempFile("antaeus-db", ".sqlite")
     // Connect to the database and create the needed tables. Drop any existing data.
@@ -60,11 +62,12 @@ fun main() {
 
     // Create core services
     val emailService = EmailService()
+    val lockingService = LockingService(dal = dal)
     val invoiceService = InvoiceService(dal = dal)
     val customerService = CustomerService(dal = dal, emailService = emailService)
 
     // This is _your_ billing service to be included where you see fit
-    val billingService = BillingService(paymentProvider, invoiceService, customerService)
+    val billingService = BillingService(paymentProvider, invoiceService, customerService, lockingService)
 
     val invoiceBillingScheduler = InvoiceBillingScheduler(billingService)
     invoiceBillingScheduler.schedule()

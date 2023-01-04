@@ -43,8 +43,9 @@ class InvoiceBillingScheduler(
     }
 
     private fun calculateSchedulerDelay() {
+        delay = 5000
+        return
         val currentDate = LocalDateTime.now()
-
         /**
          * This part of code will be executed every time the server starts (deployment, crash..) or the billing service finishes with charging
          * It could happen that someone deployed or server crashed in the middle of charging invoices

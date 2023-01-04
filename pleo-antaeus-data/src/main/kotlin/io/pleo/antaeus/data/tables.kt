@@ -19,3 +19,8 @@ object CustomerTable : Table() {
     val id = integer("id").autoIncrement().primaryKey()
     val currency = varchar("currency", 3)
 }
+
+object LockTable : Table() {
+    val id = integer("id").autoIncrement().primaryKey()
+    val customerId = integer("customer_id").uniqueIndex()
+}

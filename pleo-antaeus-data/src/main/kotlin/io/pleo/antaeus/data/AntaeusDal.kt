@@ -7,11 +7,7 @@
 
 package io.pleo.antaeus.data
 
-import io.pleo.antaeus.models.Currency
-import io.pleo.antaeus.models.Customer
-import io.pleo.antaeus.models.Invoice
-import io.pleo.antaeus.models.InvoiceStatus
-import io.pleo.antaeus.models.Money
+import io.pleo.antaeus.models.*
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 
@@ -111,5 +107,29 @@ class AntaeusDal(private val db: Database) {
         }
 
         return fetchCustomer(id)
+    }
+
+    fun setLock(customerId: Int) {
+       return transaction(db) {
+            LockTable.insert {
+                it[this.customerId] = customerId
+            }
+        }
+    }
+
+    fun releaseLock(customerId: Int) {
+        return transaction(db) {
+            LockTable.deleteWhere {
+                LockTable.customerId eq customerId
+            }
+        }
+    }
+    fun getLock(customerId: Int): Lock? {
+        return transaction(db) {
+            LockTable
+                .select { LockTable.customerId.eq(customerId) }
+                .firstOrNull()
+                ?.toLock()
+        }
     }
 }

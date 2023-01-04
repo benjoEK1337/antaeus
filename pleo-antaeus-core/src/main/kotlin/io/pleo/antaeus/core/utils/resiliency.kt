@@ -8,7 +8,9 @@ fun <T> retry(maxRetries: Int = 3, waitTimeInSeconds: Int = 5, block: () -> T): 
     val waitTimeInMilliSeconds = waitTimeInSeconds.toLong() * 1000
     while (true) {
         try {
-            Thread.sleep(waitTimeInMilliSeconds)
+            if (retries > 0) {
+                Thread.sleep(waitTimeInMilliSeconds)
+            }
             return block()
         } catch (ex: Exception) {
 
