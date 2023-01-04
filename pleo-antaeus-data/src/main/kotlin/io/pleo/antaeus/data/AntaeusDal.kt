@@ -31,7 +31,7 @@ class AntaeusDal(private val db: Database) {
         }
     }
 
-    fun fetchInvoicesByStatus(statuses: Set<InvoiceStatus>): List<Invoice> {
+    fun fetchInvoicesByStatuses(statuses: Set<InvoiceStatus>): List<Invoice> {
         return transaction(db) {
             InvoiceTable
                 .select { InvoiceTable.status.inList(statuses.map { it.name }) }

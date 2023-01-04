@@ -1,7 +1,6 @@
 package io.pleo.antaeus.core.services
 
 import io.pleo.antaeus.core.exceptions.LockException
-import io.pleo.antaeus.core.utils.retry
 import io.pleo.antaeus.data.AntaeusDal
 import io.pleo.antaeus.models.Lock
 import mu.KotlinLogging
@@ -15,9 +14,7 @@ class LockingService(private val dal: AntaeusDal) {
 
     fun setLock(customerId: Int) {
         try {
-            retry {
-                dal.setLock(customerId)
-            }
+            dal.setLock(customerId)
         } catch (ex: Exception) {
             throw LockException()
         }
@@ -25,9 +22,7 @@ class LockingService(private val dal: AntaeusDal) {
 
     fun releaseLock(customerId: Int) {
         try {
-            retry {
-                dal.releaseLock(customerId)
-            }
+            dal.releaseLock(customerId)
         } catch (ex: Exception) {
             throw LockException()
         }
@@ -35,9 +30,7 @@ class LockingService(private val dal: AntaeusDal) {
 
     fun getLock(customerId: Int): Lock? {
         try {
-            return retry {
-                dal.getLock(customerId)
-            }
+            return dal.getLock(customerId)
         } catch (ex: Exception) {
             throw LockException()
         }

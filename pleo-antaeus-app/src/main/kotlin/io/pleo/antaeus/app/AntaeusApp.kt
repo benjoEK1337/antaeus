@@ -80,7 +80,7 @@ fun main() {
     ).run()
 }
 
-// Adding this function to properly shut down the scheduler in the case instance is terminated (deployment, crash...)
+// Adding this function to properly shut down the scheduler in the case instance it is terminated (deployment, crash...)
 private fun registerShutdownHook(invoiceBillingScheduler: InvoiceBillingScheduler) {
     Runtime.getRuntime().addShutdownHook(object : Thread() {
         override fun run() {

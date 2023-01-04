@@ -1,10 +1,8 @@
 package io.pleo.antaeus.core.external
 
 import io.pleo.antaeus.core.external.definition.NotificationProvider
-import mu.KotlinLogging
 
 class EmailService: NotificationProvider {
-    private val logger = KotlinLogging.logger {}
 
     fun notifyCustomerInvoiceIsCharged(customerId: Int) {
         // TODO - Get Customer data and provide it to the message

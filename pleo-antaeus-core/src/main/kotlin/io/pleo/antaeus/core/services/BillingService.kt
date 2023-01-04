@@ -17,17 +17,16 @@ class BillingService(
     private val logger = KotlinLogging.logger {}
     private var numberOfNetworkFailedChargings = 0
 
-    fun chargeCustomersPendingInvoices() {
-        val pendingInvoices = invoiceService.fetchInvoicesByStatus(setOf(InvoiceStatus.PENDING, InvoiceStatus.FAILED))
+    fun chargeCustomersInvoices() {
+        val invoicesToCharge = invoiceService.fetchInvoicesByStatuses(setOf(InvoiceStatus.PENDING, InvoiceStatus.FAILED))
 
-        pendingInvoices.forEach {
+        invoicesToCharge.forEach {
                 chargeSingleCustomerInvoice(it)
             }
     }
-    
     private fun chargeSingleCustomerInvoice(invoice: Invoice) {
         try {
-            // By putting lock on the customerId we assure that only one charging will be executed in the cluster
+            // By putting lock on the customerId we assure that there won't be duplicate charging of customer
             if (lockingService.getLock(invoice.customerId) == null) {
 
                 lockingService.setLock(invoice.customerId)
@@ -64,7 +63,7 @@ class BillingService(
             customerService.notifyCustomerToCheckTheirAccountBalance(invoice.customerId)
         }
 
-        logger.error("Monthly charge for customer with ${invoice.customerId} ID wasn't processed due to account balance issues")
+        logger.warn("Monthly charge for customer with ${invoice.customerId} ID wasn't processed due to account balance issues")
     }
 
     private fun handleChargingExceptions(ex: Exception, invoice: Invoice) {
@@ -73,7 +72,7 @@ class BillingService(
             is CurrencyMismatchException -> invoiceService.handleCurrencyMismatchException(invoice)
             is NetworkException -> handleNetworkException(invoice)
             is LockException -> lockingService.handleLockException(invoice.customerId)
-            else -> {}
+            else -> logger.warn("Unknown error occurred during charging. Exception message: ${ex.localizedMessage}")
         }
     }
 
@@ -91,7 +90,7 @@ class BillingService(
                 return
             }
 
-            // The NetworkException will never be thrown here which is assured in the retry function - by that we avoid infinite loop
+            // This function is called to handle possible exceptions returned by retry mechanism. The NetworkException won't be thrown from retry, so the infinite loop is avoided
             handleChargingExceptions(ex, invoice)
         }
     }

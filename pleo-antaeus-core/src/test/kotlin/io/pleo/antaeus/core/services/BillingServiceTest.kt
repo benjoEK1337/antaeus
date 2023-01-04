@@ -5,7 +5,6 @@ import io.pleo.antaeus.core.external.definition.PaymentProvider
 import io.pleo.antaeus.core.utility.mockInvoicesData
 import io.pleo.antaeus.data.AntaeusDal
 import io.pleo.antaeus.models.InvoiceStatus
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
@@ -27,12 +26,12 @@ class BillingServiceTest {
     @Test
     fun `chargeCustomersPendingInvoices should charge every customer successfully`() {
         val mockedInvoices = mockInvoicesData(customersAndInvoiceNumber = 5)
-        every { invoiceServiceMock.fetchInvoicesByStatus(setOf(InvoiceStatus.PENDING, InvoiceStatus.FAILED)) } returns mockedInvoices
+        every { invoiceServiceMock.fetchInvoicesByStatuses(setOf(InvoiceStatus.PENDING, InvoiceStatus.FAILED)) } returns mockedInvoices
         every { paymentProviderMock.charge(any()) } returns true
         every { invoiceServiceMock.updateInvoiceStatus(any(), any()) } returns Random.nextInt()
         every { customerServiceMock.notifyCustomerInvoiceIsCharged(any()) } just Runs
 
-        billingService.chargeCustomersPendingInvoices()
+        billingService.chargeCustomersInvoices()
 
         verifyLocksAreExecutedCorrectly(numberOfLocks = 5)
         verify(exactly = 5) { invoiceServiceMock.updateInvoiceStatus(any(), any()) }
