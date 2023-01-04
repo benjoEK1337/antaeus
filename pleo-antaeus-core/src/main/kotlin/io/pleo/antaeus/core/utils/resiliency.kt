@@ -1,3 +1,4 @@
+@file:JvmName("ResiliencyKt")
 package io.pleo.antaeus.core.utils
 
 import io.pleo.antaeus.core.exceptions.NetworkException
