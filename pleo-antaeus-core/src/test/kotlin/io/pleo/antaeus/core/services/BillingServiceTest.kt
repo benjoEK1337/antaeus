@@ -24,7 +24,7 @@ class BillingServiceTest {
     private val billingService = BillingService(paymentProviderMock, invoiceServiceMock, customerServiceMock, lockingServiceMock)
 
     @Test
-    fun `chargeCustomersPendingInvoices should charge every customer successfully`() {
+    fun `chargeCustomersPendingInvoices should charge every customer successfully and invoices should be marked as PAID`() {
         prepareSuccessfulLockMocks()
         val mockedInvoices = mockInvoicesData(customersAndInvoiceNumber = 5)
         prepareSuccessfulServicesMocks(mockedInvoices)

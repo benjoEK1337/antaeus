@@ -6,6 +6,7 @@ import io.pleo.antaeus.core.utils.retry
 import io.pleo.antaeus.models.Invoice
 import io.pleo.antaeus.models.InvoiceStatus
 import mu.KotlinLogging
+import kotlin.math.log
 
 class BillingService(
     private val paymentProvider: PaymentProvider,
@@ -51,9 +52,17 @@ class BillingService(
     }
 
     private fun handleSuccessfulCharge(invoice: Invoice) {
-        invoiceService.updateInvoiceStatus(invoice.id, InvoiceStatus.PAID)
         customerService.notifyCustomerInvoiceIsCharged(invoice.customerId)
-        logger.info("Customer with ${invoice.id} ID is successfully charged for monthly expenses")
+
+        try {
+            retry(10, 10) {
+                invoiceService.updateInvoiceStatus(invoice.id, InvoiceStatus.PAID)
+            }
+            logger.info("Customer with ${invoice.id} ID is successfully charged for monthly expenses")
+        } catch (ex: Exception) {
+            // TODO High priority alert. The customer is charged, but the invoice table isn't updated which can lead to charging customer twice
+            logger.error("Updating invoice status with ID ${invoice.id} status failed due to Database error.")
+        }
     }
 
     private fun handleFailedCharge(invoice: Invoice) {
