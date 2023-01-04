@@ -15,7 +15,7 @@ class LockingService(private val dal: AntaeusDal) {
 
     fun setLock(customerId: Int) {
         try {
-            return retry {
+            retry {
                 dal.setLock(customerId)
             }
         } catch (ex: Exception) {
@@ -25,7 +25,7 @@ class LockingService(private val dal: AntaeusDal) {
 
     fun releaseLock(customerId: Int) {
         try {
-            return retry {
+            retry {
                 dal.releaseLock(customerId)
             }
         } catch (ex: Exception) {
