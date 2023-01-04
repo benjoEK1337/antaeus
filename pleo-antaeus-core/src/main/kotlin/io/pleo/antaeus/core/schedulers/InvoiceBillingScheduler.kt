@@ -15,8 +15,12 @@ class InvoiceBillingScheduler(
 
     private val executor = Executors.newScheduledThreadPool(10)
     private var delay = 0L
+
     companion object {
         const val SHUTDOWN_TIME = 20L
+        const val CHARGE_ITERATION_MINUTES = 30
+        const val SECONDS_IN_MINUTE = 60
+        const val SECONDS_TO_MILLISECONDS = 1000
     }
 
     private val chargeMonthlyInvoicesTask = Runnable {
@@ -51,7 +55,7 @@ class InvoiceBillingScheduler(
          **/
         when (currentDate.dayOfMonth) {
             1 -> {
-                val halfHourInMilliseconds = (30 * 60 * 1000).toLong()
+                val halfHourInMilliseconds = (CHARGE_ITERATION_MINUTES * SECONDS_IN_MINUTE * SECONDS_TO_MILLISECONDS).toLong()
                 delay = halfHourInMilliseconds
                 return
             }
