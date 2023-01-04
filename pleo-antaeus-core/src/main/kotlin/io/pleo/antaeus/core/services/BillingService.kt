@@ -63,7 +63,7 @@ class BillingService(
 
     private fun handleChargingExceptions(ex: Exception, invoice: Invoice) {
         when (ex) {
-            is CustomerNotFoundException -> {}
+            is CustomerNotFoundException -> customerService.handleCustomerNotFoundException(invoice.customerId)
             is CurrencyMismatchException -> {}
             is NetworkException -> handleNetworkException(invoice)
             else -> {}
