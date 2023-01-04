@@ -32,10 +32,12 @@ class BillingServiceTest {
         every { paymentProviderMock.charge(any()) } returns true
         every { invoiceServiceMock.updateInvoiceStatus(any(), any()) } returns Random.nextInt()
         every { customerServiceMock.notifyCustomerInvoiceIsCharged(any()) } just Runs
+        mockRetryTopLevelFunction(returnValue = true, exceptionToThrow = null)
+
         billingService.chargeCustomersInvoices()
 
         verifyLocksAreExecutedCorrectly(getLock = 5, setLock = 5, releaseLock = 5)
-        verify(exactly = 5) { invoiceServiceMock.updateInvoiceStatus(any(), any()) }
+        verify(exactly = 5) { retry<Boolean>(any(), any(), any())  }
         verify(exactly = 5) { customerServiceMock.notifyCustomerInvoiceIsCharged(any()) }
     }
 
@@ -47,13 +49,14 @@ class BillingServiceTest {
         every { lockingServiceMock.getLock(2) } returns Lock(id = 2, customerId = 2)
         every { lockingServiceMock.getLock(range(3, 5)) } answers { null }
 
+        mockRetryTopLevelFunction(returnValue = true, exceptionToThrow = null)
         every { lockingServiceMock.setLock(any()) } answers { nothing }
         every { lockingServiceMock.releaseLock(any()) } answers { nothing }
 
         billingService.chargeCustomersInvoices()
 
         verifyLocksAreExecutedCorrectly(getLock = 5, setLock = 3, releaseLock = 3)
-        verify(exactly = 3) { invoiceServiceMock.updateInvoiceStatus(any(), any()) }
+        verify(exactly = 3) { retry<Boolean>(any(), any(), any())  }
         verify(exactly = 3) { customerServiceMock.notifyCustomerInvoiceIsCharged(any()) }
     }
 
@@ -104,8 +107,7 @@ class BillingServiceTest {
         billingService.chargeCustomersInvoices()
 
         verifyLocksAreExecutedCorrectly(getLock = 1, setLock = 1, releaseLock = 1)
-        verify(exactly = 1) { retry<Boolean>(any(), any(), any())  }
-        verify(exactly = 1) { invoiceServiceMock.updateInvoiceStatus(any(), any()) }
+        verify(exactly = 2) { retry<Boolean>(any(), any(), any())  }
         verify(exactly = 1) { customerServiceMock.notifyCustomerInvoiceIsCharged(any()) }
     }
 
@@ -162,7 +164,7 @@ class BillingServiceTest {
 
         verifyLocksAreExecutedCorrectly(getLock = 1, setLock = 1, releaseLock = 1)
         verify(exactly = 1) { retry<Boolean>(any(), any(), any())  }
-        verify(exactly = 0) { invoiceServiceMock.updateInvoiceStatus(any(), any()) }
+        verify(exactly = 0) { retry(any(), any()) { invoiceServiceMock.updateInvoiceStatus(any(), any()) } }
         verify(exactly = 0) { customerServiceMock.notifyCustomerInvoiceIsCharged(any()) }
     }
 
@@ -185,14 +187,14 @@ class BillingServiceTest {
         verify(exactly = releaseLock) { lockingServiceMock.releaseLock(any()) }
     }
 
-    private fun mockRetryTopLevelFunction(returnValue: Boolean?, exceptionToThrow: Exception?) {
+    private fun<T> mockRetryTopLevelFunction(returnValue: T, exceptionToThrow: Exception?) {
         mockkStatic("io.pleo.antaeus.core.utils.ResiliencyKt")
 
         if (returnValue != null) {
-            every { retry<Boolean>(any(), any(), any()) } returns returnValue
+            every { retry<T>(any(), any(), any()) } returns returnValue
             return
         }
 
-        every { retry<Boolean>(any(), any(), any()) } throws exceptionToThrow!!
+        every { retry<T>(any(), any(), any()) } throws exceptionToThrow!!
     }
 }
