@@ -106,15 +106,21 @@ class BillingService(
             }
             handleCustomerChargeResponse(invoice, isCustomerCharged)
         } catch (ex: Exception) {
-
-            if (ex is ExternalServiceNotAvailableException) {
-                invoiceService.updateInvoiceStatus(invoice.id, InvoiceStatus.FAILED)
-                numberOfNetworkFailedChargings++
-                logger.warn("Payment provider is currently unavailable. In the current charging iteration there are $numberOfNetworkFailedChargings failed chargings due to unavailability.")
-                return
-            }
-
-            handleChargingExceptions(ex, invoice)
+            handlePaymentProviderExceptionAfterRetry(ex, invoice)
         }
+    }
+
+    private fun handlePaymentProviderExceptionAfterRetry(ex: Exception, invoice: Invoice) {
+        if (ex is ExternalServiceNotAvailableException) {
+            handleExternalServiceNotAvailableException(invoice.id)
+            return
+        }
+        handleChargingExceptions(ex, invoice)
+    }
+
+    private fun handleExternalServiceNotAvailableException(invoiceId: Int) {
+        invoiceService.updateInvoiceStatus(invoiceId, InvoiceStatus.FAILED)
+        numberOfNetworkFailedChargings++
+        logger.warn("Payment provider is currently unavailable. In the current charging iteration there are $numberOfNetworkFailedChargings failed chargings due to unavailability.")
     }
 }

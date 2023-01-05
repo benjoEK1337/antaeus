@@ -50,7 +50,6 @@ class InvoiceService(private val dal: AntaeusDal) {
             dal.updateInvoice(updatedInvoice)
 
         } catch (ex: Exception) {
-            // The invoice will be charged in the next iteration after we set status to FAILED
             dal.updateInvoiceStatus(invoice.id, InvoiceStatus.FAILED)
         }
     }
