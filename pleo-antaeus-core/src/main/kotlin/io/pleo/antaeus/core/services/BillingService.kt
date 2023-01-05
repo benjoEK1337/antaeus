@@ -25,6 +25,9 @@ class BillingService(
                 chargeSingleCustomerInvoice(it)
             }
     }
+
+    fun checkIfFailedOrPendingInvoicesExist() {}
+
     private fun chargeSingleCustomerInvoice(invoice: Invoice) {
         try {
             // By putting lock on the customerId we assure that there won't be duplicate charging of customer

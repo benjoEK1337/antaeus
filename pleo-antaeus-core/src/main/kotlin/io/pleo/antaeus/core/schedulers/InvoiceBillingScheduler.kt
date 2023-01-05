@@ -18,19 +18,12 @@ class InvoiceBillingScheduler(
 
     companion object {
         const val SHUTDOWN_TIME = 20L
-        const val CHARGE_ITERATION_MINUTES = 30
-        const val SECONDS_IN_MINUTE = 60
-        const val SECONDS_TO_MILLISECONDS = 1000
+        const val HALF_HOUR_IN_MILLISECONDS = 1800000L
     }
 
-    /*
-     * After charging iteration finishes reschedule the executor
-     * If it's 1. of the month it will schedule it in half hour to process FAILED transactions
-     * If not 1. of the month, schedule on the 1. of next month
-     */
-    private val chargeMonthlyInvoicesTask = Runnable {
-        billingService.chargeCustomersInvoices()
-        schedule()
+    // In the real system we could add the property to configuration file and decide which value to use
+    private fun getDelay(): Long {
+        return HALF_HOUR_IN_MILLISECONDS
     }
 
     override fun stop() {
@@ -68,8 +61,7 @@ class InvoiceBillingScheduler(
         val currentDate = LocalDateTime.now()
         when (currentDate.dayOfMonth) {
             1 -> {
-                val halfHourInMilliseconds = (CHARGE_ITERATION_MINUTES * SECONDS_IN_MINUTE * SECONDS_TO_MILLISECONDS).toLong()
-                delay = halfHourInMilliseconds
+                delay = getDelay()
                 return
             }
             2 -> {
@@ -82,8 +74,20 @@ class InvoiceBillingScheduler(
             .withDayOfMonth(1)
             .withHour(1)
 
-        delay = Duration.between(currentDate.withHour(1), dateToScheduleNextBilling).toMillis()
+        delay = Duration.between(currentDate, dateToScheduleNextBilling).toMillis()
     }
 
-    private fun checkIfFailedOrPendingInvoicesExist() {}
+        /*
+     * After charging iteration finishes reschedule the executor
+     * If it's 1. of the month it will schedule it in half hour to process FAILED transactions
+     * If not 1. of the month, schedule on the 1. of next month
+     */
+    private val chargeMonthlyInvoicesTask = Runnable {
+        billingService.chargeCustomersInvoices()
+        schedule()
+    }
+
+    private fun checkIfFailedOrPendingInvoicesExist() {
+        billingService.checkIfFailedOrPendingInvoicesExist()
+    }
 }
