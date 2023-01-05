@@ -157,6 +157,15 @@ Happy hacking 😁!
 #### SCHEDULER DIAGRAM
 ![alt text](scheduler_workflow.jpeg)
 
+#### HOW TO TEST
+  - In the **InvoiceBillingScheduler** at the top of **calculateSchedulerDelay** function hardcode the delay as:
+    ```kotlin
+    delay = 5000L
+    return
+    ```
+  - Put the breakpoint in the **BillingService**  inside **chargeCustomersInvoices** function
+  - Enjoy debugging
+
 ### Nice to Have
 
 1. Better handling of try-catch mechanism, ideally something globally that will handle it

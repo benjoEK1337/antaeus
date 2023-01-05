@@ -53,6 +53,8 @@ class InvoiceBillingScheduler(
     }
 
     private fun calculateSchedulerDelay() {
+        delay = 5000L
+        return
         val currentDate = LocalDateTime.now()
         when (currentDate.dayOfMonth) {
             1 -> {
