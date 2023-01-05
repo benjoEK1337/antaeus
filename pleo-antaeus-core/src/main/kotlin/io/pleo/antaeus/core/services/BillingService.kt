@@ -124,3 +124,4 @@ class BillingService(
         logger.warn("Payment provider is currently unavailable. In the current charging iteration there are $numberOfNetworkFailedChargings failed chargings due to unavailability.")
     }
 }
+

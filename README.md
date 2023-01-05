@@ -157,12 +157,19 @@ Happy hacking 😁!
 #### SCHEDULER DIAGRAM
 ![alt text](scheduler_workflow.jpeg)
 
-#### Nice to Have
+### Nice to Have
 
 1. Better handling of try-catch mechanism, ideally something globally that will handle it
 2. Less comments 
 3. Test to dive deeper into scheduler
-4. Endpoint to manually charge the invoices (for admin TOOl when the system fails to charge)
-5. Rethink the design patterns
-6. Use Coroutines to optimise
+4. Tests for Customer and Invoice services
+5. Endpoint to manually charge the invoices (for admin TOOl when the system fails to charge)
+6. Rethink the design patterns
+7. Use Coroutines to optimise
 
+### Time spent
+
+#### 3 days
+- 6 hours brainstorming
+- 8 hours writing the solution
+- 2 hours writing documentation
