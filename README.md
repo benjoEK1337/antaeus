@@ -99,6 +99,7 @@ Happy hacking 😁!
 
 - The microservice is running on multiple servers
 - System doesn't have constant high throughput, because invoices are handled periodically (transactions would be the opposite) 
+- For invoices it is important to be charged on 1. of the month, the real time execution isn't that important, so the focus won't be on optimisation
 - Pleo has established excellent SLA with payment provider regarding the rate-limit of requests (because of transactions microservice), so don't have to worry about it
 - Don't know the logic behind the amount of the bill
 
@@ -118,12 +119,6 @@ Happy hacking 😁!
 - SOLUTION:
   - As mentioned in the timezone problem the Sales/Administrative team will prepare the bills before and enter them into the system using admin tool which will in the background insert those bills in the Invoice table and mark them as PENDING.
   - The solution is to get those invoices from database on every 1. of the month and pass them to the payment provider
-3. **HOURS OF CHARGING**
-- PROBLEM:
-  - When to charge the customers?
-- SOLUTION:
-  - Charge at 6 AM (UTC) when the traffic is lower
-  - This helps also to avoid charging at 00:00 on the New Years Eve
 
 #### ARCHITECTURE DECISIONS
 
@@ -136,13 +131,31 @@ Happy hacking 😁!
     - The ScheduledExecutorService will be used for this task to avoid overhead of importing the library and to keep it simple
     - However, I think Quartz is a great solution since it provides a lot of [configuration](https://github.com/quartz-scheduler/quartz/blob/master/docs/configuration.adoc) for managing e.g the threads
     - If PLEO has a lot of scheduling in their microservices I think it would be great even to have a custom library such as quartz
-  
-2. SCHEDULER
+
+2. **SCHEDULER IMPLEMENTATION**
 - PROBLEM:
-  - For scheduling payments there are two options:
-    1. Java util ScheduledExecutorService
-    2. [Quartz](http://www.quartz-scheduler.org/) a richly featured, open source job scheduling library
-- SOLUTION
-  - The ScheduledExecutorService will be used for this task to avoid overhead of importing the library and to keep it simple
-  - However, I think Quartz is a great solution since it provides a lot of [configuration](https://github.com/quartz-scheduler/quartz/blob/master/docs/configuration.adoc) for managing e.g the threads
-  - If the PLEO has a lot of scheduling in their microservices I think it would be great even to have a custom library such as quartz
+  - When and how to charge the customers?
+- SOLUTION:
+  - Scheduler will be initialised every time the server starts (deployment, crash..)
+  - It could happen that someone deployed or server crashed in the middle of charging invoices
+  - In that case scheduler will gracefully shut down, but could still fail to charge a lot of invoices. It will normally continue to charge after the server starts.
+  - As time of charging doesn't matter. The scheduler iteration will start at 01:00 AM at every 1. of the month
+  - After the charging iteration finish, next one will be rescheduled half hour later
+  - The reason behind that is there could be cases of failed transactions due to Network or other errors. By making a new iteration of charging, those invoices will be re-processed
+  
+3. **ASSURE CUSTOMER NOT CHARGED MULTIPLE TIMES**
+- PROBLEM:
+  - How to assure customer isn't charged multiple times for same invoice?
+- SOLUTION:
+  - Assuming the system is running on multiple servers, there are need for locks on customerID
+  - In real system the distributed caching system could be used (e.g Redis), in this project, the SqlLite will serve the purpose
+  - There is an edge case where the payment provider charges the customer, but the invoice status failed due to database error
+  - Since the speed isn't that important, the operation of updating the invoice to PAID will be under retry mechanism with 10 retries and 10s delay
+  - Mostly it will past on the first iteration
+  - If the retry mechanism fails the admins will be notified with High alert since this is infrastructure problem, and other parts of app won't work as well
+
+#### Nice to Have
+
+1. Better handling of try-catch mechanism, ideally something globally that will handle it
+2. Less comments 
+

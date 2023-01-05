@@ -6,7 +6,7 @@ import io.pleo.antaeus.core.utils.retry
 import io.pleo.antaeus.models.Invoice
 import io.pleo.antaeus.models.InvoiceStatus
 import mu.KotlinLogging
-import kotlin.math.log
+import java.time.LocalDate
 
 class BillingService(
     private val paymentProvider: PaymentProvider,
@@ -26,7 +26,16 @@ class BillingService(
             }
     }
 
-    fun checkIfFailedOrPendingInvoicesExist() {}
+    fun checkIfFailedOrPendingInvoicesExist() {
+        val invoicesToCharge = invoiceService.fetchInvoicesByStatuses(setOf(InvoiceStatus.PENDING, InvoiceStatus.FAILED))
+
+        if (invoicesToCharge.isNotEmpty()) {
+            val yesterdayDate = LocalDate.now().minusDays(1)
+
+            // TODO Create alert
+            logger.error("There are ${invoicesToCharge.size} uncharged invoices after charging iteration on $yesterdayDate")
+        }
+    }
 
     private fun chargeSingleCustomerInvoice(invoice: Invoice) {
         try {
@@ -80,7 +89,10 @@ class BillingService(
 
     private fun handleChargingExceptions(ex: Exception, invoice: Invoice) {
         when (ex) {
-            is CustomerNotFoundException -> customerService.handleCustomerNotFoundException(invoice.customerId)
+            is CustomerNotFoundException -> {
+                customerService.handleCustomerNotFoundException(invoice.customerId)
+                invoiceService.updateInvoiceStatus(invoice.id, InvoiceStatus.FAILED)
+            }
             is CurrencyMismatchException -> invoiceService.handleCurrencyMismatchException(invoice)
             is NetworkException -> handleNetworkException(invoice)
             is LockException -> lockingService.handleLockException(invoice.customerId)
@@ -97,6 +109,7 @@ class BillingService(
         } catch (ex: Exception) {
 
             if (ex is ExternalServiceNotAvailableException) {
+                invoiceService.updateInvoiceStatus(invoice.id, InvoiceStatus.FAILED)
                 numberOfNetworkFailedChargings++
                 logger.warn("Payment provider is currently unavailable. In the current charging iteration there are $numberOfNetworkFailedChargings failed chargings due to unavailability.")
                 return

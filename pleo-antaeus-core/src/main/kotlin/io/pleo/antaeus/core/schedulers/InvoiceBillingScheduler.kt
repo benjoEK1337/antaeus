@@ -49,14 +49,6 @@ class InvoiceBillingScheduler(
         }
     }
 
-    /*
-     * This part of code will be executed every time the server starts (deployment, crash..) or the billing service finishes with charging iteration
-     * It could happen that someone deployed or server crashed in the middle of charging invoices
-     * Even though executor will gracefully shut down, there could be still failed and pending invoices if SHUTDOWN_TIME was exceeded
-     * On every 1. The billing service will be called every half hour to check if there are FAILED or PENDING invoices after first iteration
-     * If the payment provider is unavailable, by giving the half hour of delay, there is a space for a provider to recover
-     * If on the second day -> there are PENDING or FAILED invoices - the admin team will be contacted
-     */
     private fun calculateSchedulerDelay() {
         val currentDate = LocalDateTime.now()
         when (currentDate.dayOfMonth) {

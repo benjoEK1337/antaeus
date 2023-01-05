@@ -35,13 +35,13 @@ class InvoiceService(private val dal: AntaeusDal) {
 
             if (customer == null) {
                 // TODO Create alert for log below
-                logger.error("Customer with ${invoice.customerId} ID provided in the invoice wasn't found in the customer table.")
+                logger.error("Customer ${invoice.customerId} provided in the invoice ${invoice.id} wasn't found in the customer table.")
                 return
             }
 
             if (customer.currency.name == invoice.amount.currency.name) {
                 // TODO Create alert for log below
-                logger.error("The Currency in the invoice and customers one are same. There is an issue with the payment provider")
+                logger.error("The Currency in the invoice ${invoice.id} and customers one are same. There is an issue with the payment provider")
                 return
             }
 
