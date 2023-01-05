@@ -29,8 +29,11 @@ class InvoiceBillingScheduler(
     override fun stop() {
         try {
             executor.shutdown()
+
             if (!executor.awaitTermination(SHUTDOWN_TIME, TimeUnit.SECONDS)) {
+
                 logger.warn("Executor did not terminate in the specified time. There might be unprocessed bills.")
+
                 val droppedTasks: List<Runnable> = executor.shutdownNow()
                 logger.warn("Executor was abruptly shut down. " + droppedTasks.size + " tasks will not be executed.")
             }
@@ -69,11 +72,6 @@ class InvoiceBillingScheduler(
         delay = Duration.between(currentDate, dateToScheduleNextBilling).toMillis()
     }
 
-        /*
-     * After charging iteration finishes reschedule the executor
-     * If it's 1. of the month it will schedule it in half hour to process FAILED transactions
-     * If not 1. of the month, schedule on the 1. of next month
-     */
     private val chargeMonthlyInvoicesTask = Runnable {
         billingService.chargeCustomersInvoices()
         schedule()

@@ -39,7 +39,6 @@ class BillingService(
 
     private fun chargeSingleCustomerInvoice(invoice: Invoice) {
         try {
-            // By putting lock on the customerId we assure that there won't be duplicate charging of customer
             if (lockingService.getLock(invoice.customerId) == null) {
 
                 lockingService.setLock(invoice.customerId)
@@ -72,7 +71,7 @@ class BillingService(
             }
             logger.info("Customer with ${invoice.id} ID is successfully charged for monthly expenses")
         } catch (ex: Exception) {
-            // TODO High priority alert. The customer is charged, but the invoice table isn't updated which can lead to charging customer twice
+            // TODO High priority alert. The customer is charged, but the invoice table isn't update. Customer could be charged twice.
             logger.error("Updating invoice status with ID ${invoice.id} status failed due to Database error.")
         }
     }
@@ -115,7 +114,6 @@ class BillingService(
                 return
             }
 
-            // This function is called to handle possible exceptions returned by retry mechanism. The NetworkException won't be thrown from retry, so the infinite loop is avoided
             handleChargingExceptions(ex, invoice)
         }
     }
