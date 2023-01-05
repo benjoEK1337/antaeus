@@ -93,7 +93,7 @@ Happy hacking 😁!
 
 - This project will be treated as a mix of a task and a real system
 - The reason for statement above is to be pragmatic and to avoid the loop of over-engineering the task
-- It will have **SOME** practices from real systems to show 
+- It will have **SOME** practices from real systems to show my way of thinking
 
 ### ASSUMPTIONS
 
@@ -101,7 +101,6 @@ Happy hacking 😁!
 - System doesn't have constant high throughput, because invoices are handled periodically (transactions would be the opposite) 
 - For invoices it is important to be charged on 1. of the month, the real time execution isn't that important, so the focus won't be on optimisation
 - Pleo has established excellent SLA with payment provider regarding the rate-limit of requests (because of transactions microservice), so don't have to worry about it
-- Don't know the logic behind the amount of the bill
 
 
 ### BUSINESS DECISIONS
@@ -109,7 +108,7 @@ Happy hacking 😁!
 - PROBLEM:
   - There are multiple currencies in the project which indicates customers are in different countries/continents. 
   - Is there a need to handle charging of customers depending on the timezone?
-  - Does the pricing depend on the number of transactions of customer? If yes the timezone will matter.
+  - Does the pricing depend on the number of transactions in month? If yes the timezone will matter.
 - SOLUTION:
     - After looking at the PLEO [documentation](https://www.pleo.io/en/pricing), the charging of the PLEO services is based on the number of customer and administrative transactions 
     - PLEO Sales/Administrative team will prepare the bills before the every first of the month
@@ -129,7 +128,7 @@ Happy hacking 😁!
     2. [Quartz](http://www.quartz-scheduler.org/) a richly featured, open source job scheduling library
 - SOLUTION
     - The ScheduledExecutorService will be used for this task to avoid overhead of importing the library and to keep it simple
-    - However, I think Quartz is a great solution since it provides a lot of [configuration](https://github.com/quartz-scheduler/quartz/blob/master/docs/configuration.adoc) for managing e.g the threads
+    - However, I think Quartz is a great solution since it provides a lot of [configuration](https://github.com/quartz-scheduler/quartz/blob/master/docs/configuration.adoc) for managing the threads/coroutines
     - If PLEO has a lot of scheduling in their microservices I think it would be great even to have a custom library such as quartz
 
 2. **SCHEDULER IMPLEMENTATION**
@@ -138,24 +137,32 @@ Happy hacking 😁!
 - SOLUTION:
   - Scheduler will be initialised every time the server starts (deployment, crash..)
   - It could happen that someone deployed or server crashed in the middle of charging invoices
-  - In that case scheduler will gracefully shut down, but could still fail to charge a lot of invoices. It will normally continue to charge after the server starts.
-  - As time of charging doesn't matter. The scheduler iteration will start at 01:00 AM at every 1. of the month
+  - In that case scheduler will gracefully shut down, but still could fail to charge a lot of invoices. It will normally continue to charge after the server starts.
+  - As time of charging doesn't matter, the scheduling iteration will start at 01:00 AM at every 1. of the month
   - After the charging iteration finish, next one will be rescheduled half hour later
   - The reason behind that is there could be cases of failed transactions due to Network or other errors. By making a new iteration of charging, those invoices will be re-processed
+  - Look into the Diagram below
   
 3. **ASSURE CUSTOMER NOT CHARGED MULTIPLE TIMES**
 - PROBLEM:
   - How to assure customer isn't charged multiple times for same invoice?
 - SOLUTION:
   - Assuming the system is running on multiple servers, there are need for locks on customerID
-  - In real system the distributed caching system could be used (e.g Redis), in this project, the SqlLite will serve the purpose
-  - There is an edge case where the payment provider charges the customer, but the invoice status failed due to database error
+  - In real system the distributed caching system could be used (e.g Redis). In this project, the SqlLite will serve the purpose
+  - There is an edge case where the payment provider charges the customer, but updating the invoice status to PAID failed due to database error
   - Since the speed isn't that important, the operation of updating the invoice to PAID will be under retry mechanism with 10 retries and 10s delay
   - Mostly it will past on the first iteration
   - If the retry mechanism fails the admins will be notified with High alert since this is infrastructure problem, and other parts of app won't work as well
+
+#### SCHEDULER DIAGRAM
+![alt text](scheduler_workflow.jpeg)
 
 #### Nice to Have
 
 1. Better handling of try-catch mechanism, ideally something globally that will handle it
 2. Less comments 
+3. Test to dive deeper into scheduler
+4. Endpoint to manually charge the invoices (for admin TOOl when the system fails to charge)
+5. Rethink the design patterns
+6. Use Coroutines to optimise
 
