@@ -40,7 +40,7 @@ internal fun getPaymentProvider(): PaymentProvider {
             return when ((0..1000).random()) {
                 in (0 until 5)  -> throw CustomerNotFoundException(invoice.customerId)
                 in (5 until 10) -> throw CurrencyMismatchException(invoice.id, invoice.customerId)
-                in (10 until 15) -> throw throw NetworkException()
+                in (10 until 15) -> throw NetworkException()
                 in (15 until 20) -> false
                 else -> true
             }
