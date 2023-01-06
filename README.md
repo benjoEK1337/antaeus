@@ -99,19 +99,19 @@ Happy hacking 😁!
 
 - The microservice is running on multiple servers
 - System doesn't have constant high throughput, because invoices are handled periodically (transactions would be the opposite) 
-- For invoices it is important to be charged on 1. of the month, the real time execution isn't that important, so the focus won't be on optimisation
-- Pleo has established excellent SLA with payment provider regarding the rate-limit of requests (because of transactions microservice), so don't have to worry about it
+- For invoices, it is important to be charged on 1. of the month, the real time execution isn't that important, so the focus won't be on optimisation
+- The rate limit of requests to payment is high, so don't have to worry about that
 
 
 ### BUSINESS DECISIONS
 1. **TIMEZONES**
 - PROBLEM:
-  - There are multiple currencies in the project which indicates customers are in different countries/continents. 
+  - There are multiple currencies in the project which indicates customers could be in different countries/timezones. 
   - Is there a need to handle charging of customers depending on the timezone?
   - Does the pricing depend on the number of transactions in month? If yes the timezone will matter.
 - SOLUTION:
-    - After looking at the PLEO [documentation](https://www.pleo.io/en/pricing), the charging of the PLEO services is based on the number of customer and administrative transactions 
-    - PLEO Sales/Administrative team will prepare the bills before the every first of the month
+  - After looking at the PLEO [documentation](https://www.pleo.io/en/pricing), the charging of the PLEO services is based on the number of customer and administrative transactions 
+  - PLEO Sales/Administrative team will prepare the bills before the every first of the month
 2. **PENDING INVOICES**
 - PROBLEM:
   - What are representing the PENDING INVOICES?
@@ -126,11 +126,11 @@ Happy hacking 😁!
   - For scheduling payments there are two options:
     1. Java util ScheduledExecutorService
     2. [Quartz](http://www.quartz-scheduler.org/) a richly featured, open source job scheduling library
+    3. [CronJob](https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/) is meant for performing regular scheduled actions such as backups, report generation, and so on
 - SOLUTION
     - The ScheduledExecutorService will be used for this task to avoid overhead of importing the library and to keep it simple
-    - However, I think Quartz is a great solution since it provides a lot of [configuration](https://github.com/quartz-scheduler/quartz/blob/master/docs/configuration.adoc) for managing the threads/coroutines
-    - If PLEO has a lot of scheduling in their microservices I think it would be great even to have a custom library such as quartz
-
+    - I think Quartz is a great solution since it provides a lot of [configuration](https://github.com/quartz-scheduler/quartz/blob/master/docs/configuration.adoc) for managing the threads/coroutines
+    - CronJob could be the best solution, because the cost optimization could be achieved. The job would run once in the month and after that the job would be terminated.
 2. **SCHEDULER IMPLEMENTATION**
 - PROBLEM:
   - When and how to charge the customers?
