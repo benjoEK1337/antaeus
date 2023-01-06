@@ -1,24 +1,15 @@
-/*
-    Implements the data access layer (DAL).
-    The data access layer generates and executes requests to the database.
-
-    See the `mappings` module for the conversions between database rows and Kotlin objects.
- */
-
 package io.pleo.antaeus.data
 
-import io.pleo.antaeus.models.Currency
 import io.pleo.antaeus.models.Customer
 import io.pleo.antaeus.models.Invoice
 import io.pleo.antaeus.models.InvoiceStatus
 import io.pleo.antaeus.models.Money
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.select
-import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
 
-class AntaeusDal(private val db: Database) {
+class InvoiceDal(private val db: Database) {
+
     fun fetchInvoice(id: Int): Invoice? {
         // transaction(db) runs the internal query as a new database transaction.
         return transaction(db) {
@@ -38,6 +29,14 @@ class AntaeusDal(private val db: Database) {
         }
     }
 
+    fun fetchInvoicesByStatuses(statuses: Set<InvoiceStatus>): List<Invoice> {
+        return transaction(db) {
+            InvoiceTable
+                .select { InvoiceTable.status.inList(statuses.map { it.name }) }
+                .map { it.toInvoice() }
+        }
+    }
+
     fun createInvoice(amount: Money, customer: Customer, status: InvoiceStatus = InvoiceStatus.PENDING): Invoice? {
         val id = transaction(db) {
             // Insert the invoice and returns its new id.
@@ -53,31 +52,22 @@ class AntaeusDal(private val db: Database) {
         return fetchInvoice(id)
     }
 
-    fun fetchCustomer(id: Int): Customer? {
+    fun updateInvoice(invoice: Invoice): Int {
         return transaction(db) {
-            CustomerTable
-                .select { CustomerTable.id.eq(id) }
-                .firstOrNull()
-                ?.toCustomer()
+            InvoiceTable.update({ InvoiceTable.id eq invoice.id }) {
+                it[this.customerId] = invoice.customerId
+                it[this.currency] = invoice.amount.currency.name
+                it[this.value] = invoice.amount.value
+                it[this.status] = invoice.status.name
+            }
         }
     }
 
-    fun fetchCustomers(): List<Customer> {
+    fun updateInvoiceStatus(id: Int, status: InvoiceStatus): Int {
         return transaction(db) {
-            CustomerTable
-                .selectAll()
-                .map { it.toCustomer() }
+            InvoiceTable.update({ InvoiceTable.id eq id }) {
+                it[InvoiceTable.status] = status.name
+            }
         }
-    }
-
-    fun createCustomer(currency: Currency): Customer? {
-        val id = transaction(db) {
-            // Insert the customer and return its new id.
-            CustomerTable.insert {
-                it[this.currency] = currency.toString()
-            } get CustomerTable.id
-        }
-
-        return fetchCustomer(id)
     }
 }

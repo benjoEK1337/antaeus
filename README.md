@@ -86,3 +86,99 @@ The code given is structured as follows. Feel free however to modify the structu
 * [Sqlite3](https://sqlite.org/index.html) - Database storage engine
 
 Happy hacking 😁!
+
+## NOTES
+
+### INITIAL DECISIONS:
+
+- This project will be treated as a mix of a task and a real system
+- The reason for statement above is to be pragmatic and to avoid the loop of over-engineering the task
+- It will have **SOME** practices from real systems to show my way of thinking
+
+### ASSUMPTIONS
+
+- The microservice is running on multiple servers
+- System doesn't have constant high throughput, because invoices are handled periodically (transactions would be the opposite) 
+- For invoices, it is important to be charged on 1. of the month, the real time execution isn't that important, so the focus won't be on optimisation
+- The rate limit of requests to payment is high, so don't have to worry about that
+
+
+### BUSINESS DECISIONS
+1. **TIMEZONES**
+- PROBLEM:
+  - There are multiple currencies in the project which indicates customers could be in different countries/timezones. 
+  - Is there a need to handle charging of customers depending on the timezone?
+  - Does the pricing depend on the number of transactions in month? If yes the timezone will matter.
+- SOLUTION:
+  - After looking at the PLEO [documentation](https://www.pleo.io/en/pricing), the charging of the PLEO services is based on the number of customer and administrative transactions 
+  - PLEO Sales/Administrative team will prepare the bills before the every first of the month
+2. **PENDING INVOICES**
+- PROBLEM:
+  - What are representing the PENDING INVOICES?
+- SOLUTION:
+  - As mentioned in the timezone problem the Sales/Administrative team will prepare the bills before and enter them into the system using admin tool which will in the background insert those bills in the Invoice table and mark them as PENDING.
+  - The solution is to get those invoices from database on every 1. of the month and pass them to the payment provider
+
+#### ARCHITECTURE DECISIONS
+
+1. SCHEDULER 
+- PROBLEM:
+  - For scheduling payments there are two options:
+    1. Java util ScheduledExecutorService
+    2. [Quartz](http://www.quartz-scheduler.org/) a richly featured, open source job scheduling library
+    3. [CronJob](https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/) is meant for performing regular scheduled actions such as backups, report generation, and so on
+- SOLUTION
+    - The ScheduledExecutorService will be used for this task to avoid overhead of importing the library and to keep it simple
+    - I think Quartz is a great solution since it provides a lot of [configuration](https://github.com/quartz-scheduler/quartz/blob/master/docs/configuration.adoc) for managing the threads/coroutines
+    - CronJob could be the best solution, because the cost optimization could be achieved. The job would run once in the month and after that the job would be terminated.
+2. **SCHEDULER IMPLEMENTATION**
+- PROBLEM:
+  - When and how to charge the customers?
+- SOLUTION:
+  - Scheduler will be initialised every time the server starts (deployment, crash..)
+  - It could happen that someone deployed or server crashed in the middle of charging invoices
+  - In that case scheduler will gracefully shut down, but still could fail to charge a lot of invoices. It will normally continue to charge after the server starts.
+  - As time of charging doesn't matter, the scheduling iteration will start at 01:00 AM at every 1. of the month
+  - After the charging iteration finish, next one will be rescheduled half hour later
+  - The reason behind that is there could be cases of failed transactions due to Network or other errors. By making a new iteration of charging, those invoices will be re-processed
+  - Look into the Diagram below
+  
+3. **ASSURE CUSTOMER NOT CHARGED MULTIPLE TIMES**
+- PROBLEM:
+  - How to assure customer isn't charged multiple times for same invoice?
+- SOLUTION:
+  - Assuming the system is running on multiple servers, there are need for locks on customerID
+  - In real system the distributed caching system could be used (e.g Redis). In this project, the SqlLite will serve the purpose
+  - There is an edge case where the payment provider charges the customer, but updating the invoice status to PAID failed due to database error
+  - Since the speed isn't that important, the operation of updating the invoice to PAID will be under retry mechanism with 10 retries and 10s delay
+  - Mostly it will past on the first iteration
+  - If the retry mechanism fails the admins will be notified with High alert since this is infrastructure problem, and other parts of app won't work as well
+
+#### SCHEDULER DIAGRAM
+![alt text](scheduler_workflow.jpeg)
+
+#### HOW TO TEST
+  - In the **InvoiceBillingScheduler** at the top of **calculateSchedulerDelay** function hardcode the delay as:
+    ```kotlin
+    delay = 5000L
+    return
+    ```
+  - Put the breakpoint in the **BillingService**  inside **chargeCustomersInvoices** function
+  - Enjoy debugging
+
+### Nice to Have
+
+1. Better handling of try-catch mechanism, ideally something globally that will handle it
+2. Less comments 
+3. Test to dive deeper into scheduler
+4. Tests for Customer and Invoice services
+5. Endpoint to manually charge the invoices (for admin TOOl when the system fails to charge)
+6. Rethink the design patterns
+7. Use Coroutines to optimise
+
+### Time spent
+
+#### 3 days
+- 6 hours brainstorming
+- 8 hours writing the solution
+- 2 hours writing documentation
