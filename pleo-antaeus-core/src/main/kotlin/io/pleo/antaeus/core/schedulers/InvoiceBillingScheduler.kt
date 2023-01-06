@@ -32,13 +32,13 @@ class InvoiceBillingScheduler(
 
             if (!executor.awaitTermination(SHUTDOWN_TIME, TimeUnit.SECONDS)) {
 
-                logger.warn("Executor did not terminate in the specified time. There might be unprocessed bills.")
+                logger.error("Executor did not terminate in the specified time. There might be unprocessed bills.")
 
                 val droppedTasks: List<Runnable> = executor.shutdownNow()
-                logger.warn("Executor was abruptly shut down. " + droppedTasks.size + " tasks will not be executed.")
+                logger.error("Executor was abruptly shut down. " + droppedTasks.size + " tasks will not be executed.")
             }
         } catch (ex: Exception) {
-            logger.warn("Executor wasn't gracefully shut down. Tasks in the executor won't be executed.")
+            logger.error("Executor wasn't gracefully shut down. Tasks in the executor won't be executed. Exception message: ${ex.localizedMessage}")
         }
     }
 

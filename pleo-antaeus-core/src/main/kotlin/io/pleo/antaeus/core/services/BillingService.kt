@@ -65,7 +65,7 @@ class BillingService(
         customerService.notifyCustomerInvoiceIsCharged(invoice.customerId)
 
         try {
-            retry(10, 10) {
+            retry(maxRetries = 10, waitTimeInSeconds = 10) {
                 invoiceService.updateInvoiceStatus(invoice.id, InvoiceStatus.PAID)
             }
             logger.info("Customer with ${invoice.id} ID is successfully charged for monthly expenses")
@@ -82,7 +82,7 @@ class BillingService(
             customerService.notifyCustomerToCheckTheirAccountBalance(invoice.customerId)
         }
 
-        logger.warn("Monthly charge for customer with ${invoice.customerId} ID wasn't processed due to account balance issues")
+        logger.error("Monthly charge for customer with ${invoice.customerId} ID wasn't processed due to account balance issues")
     }
 
     private fun handleChargingExceptions(ex: Exception, invoice: Invoice) {
@@ -94,7 +94,7 @@ class BillingService(
             is CurrencyMismatchException -> invoiceService.handleCurrencyMismatchException(invoice)
             is NetworkException -> handleNetworkException(invoice)
             is LockException -> lockingService.handleLockException(invoice.customerId)
-            else -> logger.warn("Unknown error occurred during charging. Exception message: ${ex.localizedMessage}")
+            else -> logger.error("Unknown error occurred during charging. Exception message: ${ex.localizedMessage}")
         }
     }
 
@@ -120,7 +120,7 @@ class BillingService(
     private fun handleExternalServiceNotAvailableException(invoiceId: Int) {
         invoiceService.updateInvoiceStatus(invoiceId, InvoiceStatus.FAILED)
         numberOfNetworkFailedChargings++
-        logger.warn("Payment provider is currently unavailable. In the current charging iteration there are $numberOfNetworkFailedChargings failed chargings due to unavailability.")
+        logger.error("Payment provider is currently unavailable. In the current charging iteration there are $numberOfNetworkFailedChargings failed chargings due to unavailability.")
     }
 }
 

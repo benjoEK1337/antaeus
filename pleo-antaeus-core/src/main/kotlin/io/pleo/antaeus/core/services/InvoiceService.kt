@@ -39,12 +39,6 @@ class InvoiceService(private val dal: AntaeusDal) {
                 return
             }
 
-            if (customer.currency.name == invoice.amount.currency.name) {
-                // TODO Create alert for log below
-                logger.error("The Currency in the invoice ${invoice.id} and customers one are same. There is an issue with the payment provider")
-                return
-            }
-
             val updatedMoney = invoice.amount.copy(value = invoice.amount.value, currency = customer.currency)
             val updatedInvoice = invoice.copy(amount = updatedMoney, status = InvoiceStatus.FAILED)
             dal.updateInvoice(updatedInvoice)
