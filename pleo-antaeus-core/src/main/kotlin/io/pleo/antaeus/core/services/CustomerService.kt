@@ -6,23 +6,28 @@ package io.pleo.antaeus.core.services
 
 import io.pleo.antaeus.core.exceptions.CustomerNotFoundException
 import io.pleo.antaeus.core.external.EmailService
-import io.pleo.antaeus.data.AntaeusDal
+import io.pleo.antaeus.data.CustomerDal
+import io.pleo.antaeus.models.Currency
 import io.pleo.antaeus.models.Customer
 import mu.KotlinLogging
 
 class CustomerService(
-    private val dal: AntaeusDal,
+    private val customerDal: CustomerDal,
     private val emailService: EmailService
     ) {
 
     private val logger = KotlinLogging.logger {}
 
     fun fetchAll(): List<Customer> {
-        return dal.fetchCustomers()
+        return customerDal.fetchCustomers()
     }
 
     fun fetch(id: Int): Customer {
-        return dal.fetchCustomer(id) ?: throw CustomerNotFoundException(id)
+        return customerDal.fetchCustomer(id) ?: throw CustomerNotFoundException(id)
+    }
+
+    fun createCustomer(currency: Currency): Customer? {
+        return customerDal.createCustomer(currency)
     }
 
     fun handleCustomerNotFoundException(customerId: Int) {

@@ -1,20 +1,20 @@
 package io.pleo.antaeus.core.services
 
 import io.pleo.antaeus.core.exceptions.LockException
-import io.pleo.antaeus.data.AntaeusDal
+import io.pleo.antaeus.data.LockDal
 import io.pleo.antaeus.models.Lock
 import mu.KotlinLogging
 
 /*
     In the real circumstances the distributed instance of database would be used
  */
-class LockingService(private val dal: AntaeusDal) {
+class LockingService(private val lockDal: LockDal) {
 
     private val logger = KotlinLogging.logger {}
 
     fun setLock(customerId: Int) {
         try {
-            dal.setLock(customerId)
+            lockDal.setLock(customerId)
         } catch (ex: Exception) {
             throw LockException()
         }
@@ -22,7 +22,7 @@ class LockingService(private val dal: AntaeusDal) {
 
     fun releaseLock(customerId: Int) {
         try {
-            dal.releaseLock(customerId)
+            lockDal.releaseLock(customerId)
         } catch (ex: Exception) {
             throw LockException()
         }
@@ -30,7 +30,7 @@ class LockingService(private val dal: AntaeusDal) {
 
     fun getLock(customerId: Int): Lock? {
         try {
-            return dal.getLock(customerId)
+            return lockDal.getLock(customerId)
         } catch (ex: Exception) {
             throw LockException()
         }

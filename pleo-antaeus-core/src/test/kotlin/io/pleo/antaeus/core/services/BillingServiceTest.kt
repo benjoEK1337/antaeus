@@ -8,7 +8,6 @@ import io.pleo.antaeus.core.exceptions.NetworkException
 import io.pleo.antaeus.core.external.definition.PaymentProvider
 import io.pleo.antaeus.core.utility.mockInvoicesData
 import io.pleo.antaeus.core.utils.retry
-import io.pleo.antaeus.data.AntaeusDal
 import io.pleo.antaeus.models.Invoice
 import io.pleo.antaeus.models.InvoiceStatus
 import io.pleo.antaeus.models.Lock
