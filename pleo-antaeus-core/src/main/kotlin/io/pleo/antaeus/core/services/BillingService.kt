@@ -45,11 +45,10 @@ class BillingService(
 
                 val isCustomerCharged = paymentProvider.charge(invoice)
                 handleCustomerChargeResponse(invoice, isCustomerCharged)
-
-                lockingService.releaseLock(invoice.customerId)
             }
         } catch (ex: Exception) {
             handleChargingExceptions(ex, invoice)
+        } finally {
             lockingService.releaseLock(invoice.customerId)
         }
     }
