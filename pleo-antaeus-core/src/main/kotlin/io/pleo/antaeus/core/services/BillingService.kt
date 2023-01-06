@@ -82,6 +82,7 @@ class BillingService(
             customerService.notifyCustomerToCheckTheirAccountBalance(invoice.customerId)
         }
 
+        customerService.notifyCustomerMultipleFailedChargingsDueToAccountBalance(invoice.customerId)
         logger.error("Monthly charge for customer with ${invoice.customerId} ID wasn't processed due to account balance issues")
     }
 

@@ -44,6 +44,7 @@ class InvoiceService(private val dal: AntaeusDal) {
             dal.updateInvoice(updatedInvoice)
 
         } catch (ex: Exception) {
+            logger.error("Error occurred while handling CurrencyMismatchException for invoice ${invoice.id} and customer ${invoice.customerId}. Exception message: ${ex.localizedMessage}")
             dal.updateInvoiceStatus(invoice.id, InvoiceStatus.FAILED)
         }
     }

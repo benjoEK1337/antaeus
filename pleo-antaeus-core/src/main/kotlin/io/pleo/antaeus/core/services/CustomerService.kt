@@ -37,4 +37,8 @@ class CustomerService(
     fun notifyCustomerToCheckTheirAccountBalance(customerId: Int) {
         emailService.notifyCustomerToCheckTheirAccountBalance(customerId)
     }
+
+    fun notifyCustomerMultipleFailedChargingsDueToAccountBalance(customerId: Int) {
+        emailService.notifyCustomerMultipleFailedChargingsDueToAccountBalance(customerId)
+    }
 }
